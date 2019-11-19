@@ -1,7 +1,12 @@
+import base64
+from decimal import Decimal
+
 from flask import Flask, url_for, redirect, request, render_template
 from flask_login import LoginManager, current_user, login_user, logout_user
 from werkzeug.urls import url_parse
 
+import forms
+from cargar_usuarios import CargarUsuarios
 from forms import LoginForm
 from models import users, get_user
 import cx_Oracle
@@ -16,9 +21,46 @@ app.config['UPLOAD_FOLDER'] = './uploads'
 login_manager = LoginManager(app)
 
 
+def convertToBinaryData(filename):
+    # Convert digital data to binary format
+    with open(filename, 'rb') as file:
+        binaryData = file.read()
+    return bytes(binaryData)
+
+
 @app.route('/')
 def hello_world():
-    return 'Hello World!'
+    return render_template("index.html")
+
+
+@app.route('/login_test')
+def login_test():
+    return render_template("login_test.html")
+
+
+@app.route('/albums', methods=["GET", "POST"])
+def albums():
+    form = forms.FormAlbum()
+    if form.validate_on_submit():
+        if request.method == "POST":
+            idA = request.form["artista"]
+            cur = connection.cursor()
+            filename = forms.photos.save(form.portada.data)  # saves image
+            im = convertToBinaryData("uploads/%s" % (filename))
+            precio = Decimal(form.precio.data)
+            p = "%.2f" % (precio)
+            cur.execute("Insert into ALBUMS(ID_ARTISTA, NOMBRE, PORTADA, PRECIO, DIRECCION) values (:1,:2,:3,:4,:5)",
+                        (idA, form.title.data, im, p, '-'))
+            connection.commit()
+            cur.close
+        return "OK"
+    cur = connection.cursor()
+    cur.execute("SELECT * FROM ARTISTAS")
+    data = cur.fetchall()
+    if len(data) == 0:
+        return "No puede añadir albumes si no hay artistas"
+    cur.close()
+    return render_template("AddAlbum.html", art_data=data, base64=base64, form=form)
 
 
 @login_manager.user_loader
@@ -40,18 +82,15 @@ def login():
     if current_user.is_authenticated:
         return redirect('/')
     form = LoginForm()
-
     if form.validate_on_submit():
-
-
-        user = get_user(form.email.data)
+        user = CargarUsuarios.get_user(form.email.data)
         if user is not None and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
             next_page = request.args.get('next')
             if not next_page or url_parse(next_page).netloc != '':
                 next_page = '/'
             return redirect(next_page)
-    return render_template('login_form.html', form=form)
+    return render_template('login_test.html', form=form)
 
 
 @app.route("/agregar_usuarios")

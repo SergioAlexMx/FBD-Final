@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% block content %}
+    {% from "macro.html" import render_field %}
+    <div class="jumbotron">
+        <h1 class="display-4">Agregar album</h1>
+        <p class="lead">Ingrese la informacion correspondiente en los siguientes campos</p>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-primary" role="alert">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" enctype="multipart/form-data">
+            {{ render_field(form.hidden_tag) }}
+            {{ render_field(form.title, class="form-control") }}
+             <label>Artista</label>
+            <div class="form-row">
+                <div class="form-group col-md">
+                    <select name="artista" class="form-control">
+                        {% for a in art_data %}
+                            <option value="{{ a.0 }}">{{ a.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="button" onclick="location.href='/create_artist'" class="btn btn-primary mb-2">Nuevo
+                    artista
+                </button>
+            </div>
+             <label>Imagen</label>
+            {{ render_field(form.portada, class="btn btn-primary") }}
+            {{ render_field(form.precio, class="form-control") }}
+        <div align="center">
+            {{ render_field(form.submit, class="btn btn-primary") }}
+        </div>
+        </form>
+    </div>
+{% endblock %}
